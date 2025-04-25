@@ -1,0 +1,7 @@
+Flask==3.0.0
+Flask-CORS==4.0.0
+langchain==0.1.14
+langchain-community==0.0.26
+langchain-openai==0.0.6
+faiss-cpu==1.7.4
+openai==1.17.2
