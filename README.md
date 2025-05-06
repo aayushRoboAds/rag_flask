@@ -1,7 +1,7 @@
 # 📘 API Documentation – LangChain Excel RAG Flask App
 
 Base URL:  
-http://<your-server-ip>:5001
+http://app.holoagent.ai
 
 ---
 
