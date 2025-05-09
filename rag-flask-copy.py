@@ -10,7 +10,9 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain.chains import RetrievalQA
 from langchain.vectorstores import FAISS
-from langchain.document_loaders import UnstructuredExcelLoader
+# from langchain.document_loaders import UnstructuredExcelLoader
+# from langchain.document_loaders import UnstructuredPDFLoader
+from langchain_unstructured import UnstructuredLoader
 
 # Initialize app
 app = Flask(__name__)
@@ -125,24 +127,48 @@ def upload_document():
     if 'file' not in request.files or 'userid' not in request.form:
         return jsonify({'error': 'Missing file or userid'}), 400
 
-    file = request.files['file']
-    userid = request.form['userid']
+    file = request.files.getlist('file')
+    userid = request.form.get('userid')
 
     return create_user_folder(file, userid)
 
+def load_documents(file_path):
+    ext = os.path.splitext(file_path)[1].lower()
+
+    if ext in ['.xls', '.xlsx']:
+        from langchain_community.document_loaders import UnstructuredExcelLoader
+        loader = UnstructuredExcelLoader(file_path)
+
+    elif ext == '.pdf':
+        from langchain_community.document_loaders import PyPDFLoader
+        loader = PyPDFLoader(file_path)
+
+    else:
+        raise ValueError('Unsupported file type')
+
+    return loader.load()
 def create_user_folder(file, userid):
     try:
         user_folder = get_user_folder(userid)
         os.makedirs(user_folder, exist_ok=True)
 
-        file_path = os.path.join(user_folder, secure_filename(file.filename))
-        file.save(file_path)
+        all_docs = []
+        for fil in file:
+            file_path = os.path.join(user_folder, secure_filename(fil.filename))
+            fil.save(file_path)
+            docs = load_documents(file_path)
+            all_docs.extend(docs)
 
-        loader = UnstructuredExcelLoader(file_path)
-        docs = loader.load()
+        if not all_docs:
+            return jsonify({'error': 'No valid documents loaded'}), 400
+
+        # file_path = os.path.join(user_folder, secure_filename(file.filename))
+        # file.save(file_path)
+        
+        # docs = load_documents(file_path)
 
         embedding = OpenAIEmbeddings(api_key=get_openai_key())
-        vector_store = FAISS.from_documents(documents=docs, embedding=embedding)
+        vector_store = FAISS.from_documents(documents=all_docs, embedding=embedding)
         vector_store.save_local(user_folder)
 
         return jsonify({'message': 'File uploaded and vector store created successfully'}), 200
@@ -157,8 +183,8 @@ def modify_user():
     if 'file' not in request.files or 'userid' not in request.form:
         return jsonify({'error': 'Missing file or userid'}), 400
 
-    file = request.files['file']
-    userid = request.form['userid']
+    file = request.files.getlist('file')
+    userid = request.form.get('userid')
     user_folder = get_user_folder(userid)
 
     try:
@@ -225,4 +251,4 @@ def view_all_users():
 # --- App Entrypoint ---
 if __name__ == "__main__":
     app.logger.info("Starting Flask app...")
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5001)
