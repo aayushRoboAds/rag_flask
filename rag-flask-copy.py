@@ -251,4 +251,4 @@ def view_all_users():
 # --- App Entrypoint ---
 if __name__ == "__main__":
     app.logger.info("Starting Flask app...")
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5001)
